@@ -70,24 +70,6 @@ pub struct RgbaColor {
 	pub raw: Rgba<u8>,
 }
 
-const XYZ_LINEAR_GAMMA_THRESHOLD: f32 = 0.04045f32;
-const XYZ_LINEAR_GAMMA_SLOPE: f32 = 12.92f32;
-const XYZ_GAMMA_EXPONENT: f32 = 2.4;
-const XYZ_SCALE_FACTOR: f32 = 1.055;
-const XYZ_CONTINUOUS_OFFSET: f32 = 0.055;
-
-fn linearize_rgb_value(value: u8) -> f32 {
-	let mut normalized = value as f32 / 255f32;
-
-	if XYZ_LINEAR_GAMMA_THRESHOLD < normalized {
-		normalized = f32::powf((normalized + XYZ_CONTINUOUS_OFFSET) / XYZ_SCALE_FACTOR, XYZ_GAMMA_EXPONENT)
-	} else {
-		normalized = normalized / XYZ_LINEAR_GAMMA_SLOPE;
-	}
-
-	return normalized * 100f32;
-}
-
 impl RgbaColor {
 	pub fn red(&self) -> &u8 {
 		&self.raw.0[0]
@@ -105,11 +87,34 @@ impl RgbaColor {
 		&self.raw.0[3]
 	}
 
+	/// Non-linear transfer function mapping sRGB values to linear RGB values.
+	/// sRGB: [0, 255] -> linear intensity: [0, 100]
+	/// https://en.wikipedia.org/wiki/SRGB
+	fn gamma_transfer(srgb_value: u8) -> f32 {
+		const XYZ_LINEAR_GAMMA_THRESHOLD: f32 = 0.04045f32;
+		const XYZ_LINEAR_GAMMA_SLOPE: f32 = 12.92f32;
+		const XYZ_GAMMA_EXPONENT: f32 = 2.4;
+		const XYZ_SCALE_FACTOR: f32 = 1.055;
+		const XYZ_CONTINUOUS_OFFSET: f32 = 0.055;
+
+		let mut normalized = srgb_value as f32 / 255f32;
+
+		if XYZ_LINEAR_GAMMA_THRESHOLD < normalized {
+			// Linear function for low brightness values
+			normalized = f32::powf((normalized + XYZ_CONTINUOUS_OFFSET) / XYZ_SCALE_FACTOR, XYZ_GAMMA_EXPONENT)
+		} else {
+			// Displaced power law for remaining range
+			normalized = normalized / XYZ_LINEAR_GAMMA_SLOPE;
+		}
+
+		return normalized * 100f32;
+	}
+
 	pub fn linearize(&self) -> LinearRgbaColor {
 		return LinearRgbaColor { 
-			r: linearize_rgb_value(*self.red()), 
-			g: linearize_rgb_value(*self.green()), 
-			b: linearize_rgb_value(*self.blue()), 
+			r: Self::gamma_transfer(*self.red()), 
+			g: Self::gamma_transfer(*self.green()), 
+			b: Self::gamma_transfer(*self.blue()), 
 			alpha: *self.alpha()
 		}
 	}
@@ -167,20 +172,20 @@ impl ToXyza for RgbaColor {
 	}
 }
 
-// https://en.wikipedia.org/wiki/Illuminant_D65
-const D65_X: f32 =  95.047f32;
-const D65_Y: f32 = 100f32;
-const D65_Z: f32 = 108.883f32;
-
-const L_SCALE: f32 = 116f32;
-const A_SCALE: f32 = 500f32;
-const B_SCALE: f32 = 200f32;
-
-const LAB_LINEAR_THRESHOLD: f32 = 0.008856451679f32;
-const LAB_LINEAR_ADDEND: f32 = 4f32 / 29f32;
-
 impl ToLaba for RgbaColor {
 	fn to_laba(&self) -> LabaColor {
+		// https://en.wikipedia.org/wiki/Illuminant_D65
+		const D65_X: f32 =  95.047f32;
+		const D65_Y: f32 = 100f32;
+		const D65_Z: f32 = 108.883f32;
+
+		const L_SCALE: f32 = 116f32;
+		const A_SCALE: f32 = 500f32;
+		const B_SCALE: f32 = 200f32;
+
+		const LAB_LINEAR_THRESHOLD: f32 = 0.008856451679f32;
+		const LAB_LINEAR_ADDEND: f32 = 4f32 / 29f32;
+
 		let xyza = &self.to_xyza();
 
 		fn lab_f(t: f32) -> f32 {
