@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.0", features = ["derive"] }
+image = "0.25.8"
+ndarray = "0.16.1"
+ordered-float = "5.0.0"
