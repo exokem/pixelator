@@ -28,29 +28,29 @@ impl LabaColor {
 		const WC: f32 = 1.0;
 		const WH: f32 = 1.0;
 
-		let xC1 = f32::sqrt( f32::powi( self.a, 2) + f32::powi( self.b, 2) );
-		let xC2 = f32::sqrt( f32::powi( y.a, 2) + f32::powi( y.b, 2) );
-		let mut xDL = y.l - self.l;
-		let mut xDC = xC2 - xC1;
-		let xDE = f32::sqrt( ( ( self.l - y.l ) * ( self.l - y.l ) )
+		let x_c1 = f32::sqrt( f32::powi( self.a, 2) + f32::powi( self.b, 2) );
+		let x_c2 = f32::sqrt( f32::powi( y.a, 2) + f32::powi( y.b, 2) );
+		let mut x_dl = y.l - self.l;
+		let mut x_dc = x_c2 - x_c1;
+		let x_de = f32::sqrt( ( ( self.l - y.l ) * ( self.l - y.l ) )
 				+ ( ( self.a - y.a ) * ( self.a - y.a ) )
 				+ ( ( self.b - y.b ) * ( self.b - y.b ) ) );
 
-		let mut xDH = ( xDE * xDE ) - ( xDL * xDL ) - ( xDC * xDC );
-		if xDH > 0f32 {
-			xDH = f32::sqrt( xDH );
+		let mut x_dh = ( x_de * x_de ) - ( x_dl * x_dl ) - ( x_dc * x_dc );
+		if x_dh > 0f32 {
+			x_dh = f32::sqrt( x_dh );
 		} else {
-			xDH = 0f32;
+			x_dh = 0f32;
 		}
 
-		let xSC = 1f32 + ( 0.045f32 * xC1 );
-		let xSH = 1f32 + ( 0.015f32 * xC1 );
+		let x_sc = 1f32 + ( 0.045f32 * x_c1 );
+		let x_sh = 1f32 + ( 0.015f32 * x_c1 );
 
-		xDL /= WL;
-		xDC /= WC * xSC;
-		xDH /= WH * xSH;
+		x_dl /= WL;
+		x_dc /= WC * x_sc;
+		x_dh /= WH * x_sh;
 
-		return f32::sqrt( f32::powi(xDL, 2) + f32::powi(xDC, 2) + f32::powi(xDH, 2) );
+		return f32::sqrt( f32::powi(x_dl, 2) + f32::powi(x_dc, 2) + f32::powi(x_dh, 2) );
 	}
 }
 
@@ -202,61 +202,4 @@ impl ToLaba for RgbaColor {
 			alpha: xyza.alpha,
 		};
 	}
-}
-
-
-// fn rgba_to_xyza(rgba: Rgba<u8>) -> XyzaColor {
-// 	fn xyzmed(c: u8) -> f32 {
-// 		let mut f = c as f32 / 255f32;
-
-// 		if 0.04045f32 < f {
-// 			f = f32::powf((f + 0.055f32) / 1.055f32, 2.4f32)
-// 		} else {
-// 			f = f / 12.92f32;
-// 		}
-
-// 		return f * 100f32;
-// 	}
-
-// 	let [r, g, b, a] = rgba.0;
-
-// 	let fr = xyzmed(r);
-// 	let fg = xyzmed(g);
-// 	let fb = xyzmed(b);
-
-// 	return XyzaColor { 
-// 		x: (fr * 0.4124f32) + (fg * 0.3576f32) + (fb * 0.1805f32), 
-// 		y: (fr * 0.2126f32) + (fg * 0.7152f32) + (fb * 0.0722f32), 
-// 		z: (fr * 0.0193f32) + (fg * 0.1192f32) + (fb * 0.9505f32), 
-// 		alpha: a, 
-// 	}
-// }
-
-// https://www.easyrgb.com/en/math.php
-fn xyza_to_cie(xyza: XyzaColor) -> LabaColor {
-
-	const RX: f32 = 95.047f32;
-	const RY: f32 = 100.000f32;
-	const RZ: f32 = 108.883f32;
-
-	fn cielmed(c: f32, rc: f32) -> f32 {
-		let c = c / rc;
-
-		if 0.008856f32 < c {
-			return f32::powf(c, 1f32 / 3f32);
-		} else {
-			return (7.787f32 * c) + (16f32 / 116f32);
-		}
-	}
-
-	let vx = cielmed(xyza.x, RX);
-	let vy = cielmed(xyza.y, RY);
-	let vz = cielmed(xyza.z, RZ);
-
-	return LabaColor {
-		l: (116f32 * vy) - 16f32,
-		a: 500f32 * (vx - vy),
-		b: 200f32 * (vy - vz),
-		alpha: xyza.alpha,
-	};
 }
