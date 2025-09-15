@@ -13,6 +13,16 @@ pub struct Palette {
 	pub colors: Vec<PaletteColor>
 }
 
+impl From<Vec<RgbaColor>> for Palette {
+	fn from(value: Vec<RgbaColor>) -> Self {
+		let colors = value.into_iter().map(|rgba| {
+				PaletteColor{rgba, laba: LabaColor::from(rgba)}
+			}).collect();
+
+		Palette { colors }
+	}
+}
+
 impl FromStr for Palette {
 	type Err = String;
 
