@@ -10,8 +10,17 @@ pub struct XyzaColor {
 	pub alpha: u8,
 }
 
-pub trait ToXyza {
-	fn to_xyza(&self) -> XyzaColor;
+impl From<RgbaColor> for XyzaColor {
+	fn from(value: RgbaColor) -> Self {
+		let linear = value.linearize();
+
+		XyzaColor { 
+			x: (linear.r * 0.4124f32) + (linear.g * 0.3576f32) + (linear.b * 0.1805f32), 
+			y: (linear.r * 0.2126f32) + (linear.g * 0.7152f32) + (linear.b * 0.0722f32), 
+			z: (linear.r * 0.0193f32) + (linear.g * 0.1192f32) + (linear.b * 0.9505f32), 
+			alpha: linear.alpha, 
+		}
+	}
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -19,6 +28,7 @@ pub struct LabaColor {
 	pub l: f32,
 	pub a: f32,
 	pub b: f32,
+	#[allow(dead_code)]
 	pub alpha: u8,
 }
 
@@ -54,8 +64,45 @@ impl LabaColor {
 	}
 }
 
-pub trait ToLaba {
-	fn to_laba(&self) -> LabaColor;
+impl From<XyzaColor> for LabaColor {
+	fn from(value: XyzaColor) -> Self {
+		// https://en.wikipedia.org/wiki/Illuminant_D65
+		const D65_X: f32 =  95.047f32;
+		const D65_Y: f32 = 100f32;
+		const D65_Z: f32 = 108.883f32;
+
+		const L_SCALE: f32 = 116f32;
+		const A_SCALE: f32 = 500f32;
+		const B_SCALE: f32 = 200f32;
+
+		const LAB_LINEAR_THRESHOLD: f32 = 0.008856451679f32;
+		const LAB_LINEAR_ADDEND: f32 = 4f32 / 29f32;
+
+		fn lab_f(t: f32) -> f32 {
+			if LAB_LINEAR_THRESHOLD < t {
+				return f32::powf(t, 1f32 / 3f32);
+			} else {
+				return (7.787f32 * t) + LAB_LINEAR_ADDEND;
+			}
+		}
+
+		let vx = lab_f(value.x / D65_X);
+		let vy = lab_f(value.y / D65_Y);
+		let vz = lab_f(value.z / D65_Z);
+
+		LabaColor {
+			l: (L_SCALE * vy) - 16f32,
+			a: A_SCALE * (vx - vy),
+			b: B_SCALE * (vy - vz),
+			alpha: value.alpha,
+		}
+	}
+}
+
+impl From<RgbaColor> for LabaColor {
+	fn from(value: RgbaColor) -> Self {
+		LabaColor::from(XyzaColor::from(value))
+	}
 }
 
 pub struct LinearRgbaColor {
@@ -126,6 +173,12 @@ impl From<Rgba<u8>> for RgbaColor {
 	}
 }
 
+impl From<[u8; 4]> for RgbaColor {
+	fn from(value: [u8; 4]) -> Self {
+		RgbaColor { raw: Rgba(value) }
+	}
+}
+
 impl FromStr for RgbaColor {
 	type Err = String;
 
@@ -165,52 +218,3 @@ impl FromStr for RgbaColor {
 	}
 }
 
-impl ToXyza for RgbaColor {
-	fn to_xyza(&self) -> XyzaColor {
-		let linear = &self.linearize();
-
-		return XyzaColor { 
-			x: (linear.r * 0.4124f32) + (linear.g * 0.3576f32) + (linear.b * 0.1805f32), 
-			y: (linear.r * 0.2126f32) + (linear.g * 0.7152f32) + (linear.b * 0.0722f32), 
-			z: (linear.r * 0.0193f32) + (linear.g * 0.1192f32) + (linear.b * 0.9505f32), 
-			alpha: linear.alpha, 
-		}
-	}
-}
-
-impl ToLaba for RgbaColor {
-	fn to_laba(&self) -> LabaColor {
-		// https://en.wikipedia.org/wiki/Illuminant_D65
-		const D65_X: f32 =  95.047f32;
-		const D65_Y: f32 = 100f32;
-		const D65_Z: f32 = 108.883f32;
-
-		const L_SCALE: f32 = 116f32;
-		const A_SCALE: f32 = 500f32;
-		const B_SCALE: f32 = 200f32;
-
-		const LAB_LINEAR_THRESHOLD: f32 = 0.008856451679f32;
-		const LAB_LINEAR_ADDEND: f32 = 4f32 / 29f32;
-
-		let xyza = &self.to_xyza();
-
-		fn lab_f(t: f32) -> f32 {
-			if LAB_LINEAR_THRESHOLD < t {
-				return f32::powf(t, 1f32 / 3f32);
-			} else {
-				return (7.787f32 * t) + LAB_LINEAR_ADDEND;
-			}
-		}
-
-		let vx = lab_f(xyza.x / D65_X);
-		let vy = lab_f(xyza.y / D65_Y);
-		let vz = lab_f(xyza.z / D65_Z);
-
-		return LabaColor {
-			l: (L_SCALE * vy) - 16f32,
-			a: A_SCALE * (vx - vy),
-			b: B_SCALE * (vy - vz),
-			alpha: xyza.alpha,
-		};
-	}
-}
