@@ -120,6 +120,12 @@ impl RgbaColor {
 	}
 }
 
+impl From<Rgba<u8>> for RgbaColor {
+	fn from(value: Rgba<u8>) -> Self {
+		RgbaColor { raw: value }
+	}
+}
+
 impl FromStr for RgbaColor {
 	type Err = String;
 
