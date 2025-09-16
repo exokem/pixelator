@@ -1,6 +1,5 @@
 use std::{path::PathBuf};
 use clap::{CommandFactory, Parser, Subcommand};
-// use ::image::imageops::FilterType;
 
 use crate::{image::{Image, SamplingFilter}, palette::Palette};
 
@@ -96,9 +95,8 @@ enum Commands {
 		#[arg(
 			short, long,
 			value_name = "SCALE_METHOD",
-			default_value_t = SamplingFilter::Nearest
 		)]
-		sampling_filter: SamplingFilter,
+		sampling_filter: Option<SamplingFilter>,
 
 		/// Specify individual files for processing
 		#[arg(
@@ -139,12 +137,12 @@ fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
 	Ok(format!("Successfully applied palette to {} images", files.len()))
 }
 
-fn scale(files: &Vec<PathBuf>, filter: SamplingFilter, divisor: u32) -> Result<String, String> {
+fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32) -> Result<String, String> {
 
 	for file in files {
 		let mut image = Image::load(file)?;
 
-		image.resize(image.width() / divisor, image.height() / divisor, filter)?;
+		image.resize(image.width() / divisor, image.height() / divisor, filter.unwrap_or(SamplingFilter::Nearest))?;
 
 		let name = image.name()?;
 
