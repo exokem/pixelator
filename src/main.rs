@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{path::PathBuf};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 
 use crate::{image::Image, palette::Palette};
@@ -13,45 +13,56 @@ struct Cli {
 	#[command(subcommand)]
 	command: Commands,
 
-	/// Specify a single file for processing
-	#[arg(
-		short, long,
-		value_name = "FILE"
-	)]
-	file: Option<PathBuf>,
-
 	/// Specify a directory for bulk processing
-	#[arg(
-		short, long,
-		value_name = "DIRECTORY"
-	)]
-	directory: Option<PathBuf>,
+	// #[arg(
+	// 	short, long,
+	// 	value_name = "DIRECTORY"
+	// )]
+	// directory: Option<PathBuf>,
 
 	/// Specify a directory for output files
 	#[arg(
 		short, long,
 		value_name = "DIRECTORY"
 	)]
-	output: PathBuf
+	output: Option<PathBuf>
+}
+
+impl Cli {
+	#[allow(dead_code)]
+	pub fn exit(message: &str) {
+		println!("{}", message);
+		let _ = Cli::command().print_help();
+		std::process::exit(0);
+	}
 }
 
 #[derive(Subcommand)]
 enum Commands {
 	/// Reduce colors in the target resource(s)
 	Reduce {
-		/// Specify the percentage threshold for color replacement
+		// #[arg(
+		// 	short, long,
+		// 	value_name = "THRESHOLD",
+		// 	default_value_t = 50.0,
+		// )]
+		// threshold: f32,
+
+		/// Provide a color palette for image color reduction
 		#[arg(
 			short, long,
-			value_name = "THRESHOLD",
-			default_value_t = 50.0,
+			value_parser = clap::value_parser!(Palette),
+			value_name = "PALETTE"
 		)]
-		threshold: f32,
+		palette: Palette,
 
-		// #[arg(
-		// 	value_parser = clap::value_parser!(RgbColor),
-		// 	num_args = 3..,
-		// )]
-		// colors: Vec<RgbColor>,
+		/// Specify individual files for processing
+		#[arg(
+			short, long,
+			value_name = "FILE",
+			num_args = 0..,
+		)]
+		files: Vec<PathBuf>,
 	},
 
 	/// Resize the target resource(s)
@@ -91,30 +102,28 @@ enum MergeMethod {
 fn main() {
 	let cli = Cli::parse();
 
-	// Either a file or directory is required
-	if cli.file.is_none() && cli.directory.is_none() {
-		Cli::command().print_help().unwrap();
-		std::process::exit(0);
+// "#ffffdd;#fcfd86;#fcc210;#e7fbfc;#d5fcf8;#b0d1d7;#c1c3ae;#666757;#8a8e7e;#369cb5;#1e9ab2;#17617a;#136a82;#273a48;#20292e;#101e27;#0b1419;#aa8656;#584936;#755e41;#432e19"
+
+	let _ = match &cli.command {
+		Commands::Reduce { palette, files } => {
+			reduce(palette, files)
+		}
+		Commands::Scale  { factor, power, merge } => {
+			Ok("".to_string())
+		}
+	};
+}
+
+fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
+	for file in files {
+		let mut image = Image::load(file)?;
+
+		image.apply_palette(palette);
+
+		let name = image.name()?;
+
+		image.save_as(&format!("{name}_reduced"))?;
 	}
 
-	let palette = Palette::from_str("#ffffdd;#fcfd86;#fcc210;#17617a;#273a48;#aa8656;#432e19").unwrap();
-
-	// Process file
-	if cli.directory.is_none() {
-		let path: PathBuf = cli.file.unwrap();
-		let mut img = Image::load(path).unwrap();
-
-		img.apply_palette(&palette);
-		let _ = img.raw.save("test.png");
-
-	}
-
-	// match &cli.command {
-	// 	Commands::Reduce { } => {
-
-	// 	}
-	// 	Commands::Scale  { factor, power, merge } => {
-
-	// 	}
-	// }
+	Ok("".to_string())
 }
