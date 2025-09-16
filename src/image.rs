@@ -1,10 +1,11 @@
-use std::{path::PathBuf};
+use std::{ffi::OsStr, path::PathBuf};
 
 use image::{DynamicImage, GenericImage, GenericImageView, ImageReader, Rgba};
 
 use crate::{palette::Palette, rgb::RgbaColor};
 
 pub struct Image {
+	pub path: PathBuf,
 	pub raw: DynamicImage
 }
 
@@ -17,6 +18,11 @@ impl Image {
 	#[allow(dead_code)]
 	pub fn width(&self) -> u32 {
 		self.raw.width()
+	}
+
+	pub fn name(&self) -> Result<&str, String> {
+		self.path.file_stem().ok_or("Image missing file name")?
+			.to_str().ok_or("Invalid file name".to_string())
 	}
 
 	pub fn collect_unique_colors(&self) -> Vec<RgbaColor> {
@@ -43,13 +49,25 @@ impl Image {
 		}
 	}
 
-	pub fn load(path: PathBuf) -> Result<Self, String> {
+	pub fn load(path: &PathBuf) -> Result<Self, String> {
 		let img = ImageReader::open(path)
 			.map_err(|err| err.to_string())?
 			.decode().map_err(|err| err.to_string())?;
 
 		return Ok(Image {
+			path: path.to_path_buf(),
 			raw: img
 		})
+	}
+
+	pub fn save_as(&self, name: &str) -> Result<(), String> {
+		let extension = self.path.extension()
+			.ok_or("Image missing extension")?
+			.to_str().ok_or("Invalid image extension")?;
+		// let name = self.path.file_stem().ok_or("Image missing file name")?;
+
+		self.raw.save(self.path.with_file_name(format!("{name}.{extension}")));
+
+		Ok(())
 	}
 }
