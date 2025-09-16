@@ -1,5 +1,6 @@
-use std::{path::PathBuf};
+use std::{fmt, path::PathBuf};
 
+use clap::ValueEnum;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageReader, Rgba};
 
 use crate::{palette::Palette, rgb::RgbaColor};
@@ -60,15 +61,45 @@ impl Image {
 		})
 	}
 
+	pub fn resize(&mut self, width: u32, height: u32, filter: SamplingFilter) -> Result<(), String> {
+		let filter_type = match filter {
+			SamplingFilter::Nearest => ::image::imageops::FilterType::Nearest,
+			SamplingFilter::Linear => ::image::imageops::FilterType::Triangle,
+			SamplingFilter::Cubic => ::image::imageops::FilterType::CatmullRom,
+			SamplingFilter::Gaussian => ::image::imageops::FilterType::Gaussian,
+			SamplingFilter::Lanczos => ::image::imageops::FilterType::Lanczos3,
+		};
+
+		self.raw = self.raw.resize(width, height, filter_type);
+
+		Ok(())
+	}
+
 	pub fn save_as(&self, name: &str) -> Result<(), String> {
-		let extension = self.path.extension()
-			.ok_or("Image missing extension")?
-			.to_str().ok_or("Invalid image extension")?;
+		// let extension = self.path.extension()
+		// 	.ok_or("Image missing extension")?
+		// 	.to_str().ok_or("Invalid image extension")?;
 		// let name = self.path.file_stem().ok_or("Image missing file name")?;
 
-		self.raw.save(self.path.with_file_name(format!("{name}.{extension}")))
+		self.raw.save(self.path.with_file_name(format!("{name}.png")))
 			.map_err(|e| e.to_string())?;
 
 		Ok(())
 	}
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
+pub enum SamplingFilter {
+	/// Nearest Neighbor
+	Nearest,
+	Linear,
+	Cubic, 
+	Gaussian,
+	Lanczos
+}
+
+impl fmt::Display for SamplingFilter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }

@@ -1,7 +1,8 @@
 use std::{path::PathBuf};
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand};
+// use ::image::imageops::FilterType;
 
-use crate::{image::Image, palette::Palette};
+use crate::{image::{Image, SamplingFilter}, palette::Palette};
 
 mod rgb;
 mod image;
@@ -59,7 +60,7 @@ enum Commands {
 		/// Specify individual files for processing
 		#[arg(
 			short, long,
-			value_name = "FILE",
+			value_name = "FILES",
 			num_args = 0..,
 		)]
 		files: Vec<PathBuf>,
@@ -67,36 +68,46 @@ enum Commands {
 
 	/// Resize the target resource(s)
 	Scale {
-		/// Specify a floating point scale factor 
-		#[arg(
-			short, long,
-			value_name = "FACTOR",
-			default_value_t = 1.0f32,
-		)]
-		factor: f32,
+		// /// Specify a floating point scale factor 
+		// #[arg(
+		// 	short, long,
+		// 	value_name = "FACTOR",
+		// 	default_value_t = 1.0f32,
+		// )]
+		// factor: f32,
 
 		/// Specify a scale factor based on a power of two
 		#[arg(
 			short, long,
-			value_name = "POWER",
-			default_value_t = 0,
+			value_name = "DIVISOR",
+			default_value_t = 1,
 		)]
-		power: i16,
+		divisor: u32,
 
-		/// Specify how pixels are merged when downscaling
+		// /// Specify how pixels are merged when downscaling
+		// #[arg(
+		// 	short, long,
+		// 	value_name = "METHOD",
+		// 	value_enum,
+		// 	default_value_t = MergeMethod::Average,
+		// )]
+		// merge: MergeMethod
+
 		#[arg(
 			short, long,
-			value_name = "METHOD",
-			value_enum,
-			default_value_t = MergeMethod::Average,
+			value_name = "SCALE_METHOD",
+			default_value_t = SamplingFilter::Nearest
 		)]
-		merge: MergeMethod
-	}
-}
+		sampling_filter: SamplingFilter,
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum MergeMethod {
-	Average
+		/// Specify individual files for processing
+		#[arg(
+			short, long,
+			value_name = "FILES",
+			num_args = 0..,
+		)]
+		files: Vec<PathBuf>,
+	}
 }
 
 fn main() {
@@ -108,8 +119,8 @@ fn main() {
 		Commands::Reduce { palette, files } => {
 			reduce(palette, files)
 		}
-		Commands::Scale  { factor, power, merge } => {
-			Ok("".to_string())
+		Commands::Scale  { files, sampling_filter, divisor } => {
+			scale(files, *sampling_filter, *divisor)
 		}
 	};
 }
@@ -123,6 +134,21 @@ fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
 		let name = image.name()?;
 
 		image.save_as(&format!("{name}_reduced"))?;
+	}
+
+	Ok(format!("Successfully applied palette to {} images", files.len()))
+}
+
+fn scale(files: &Vec<PathBuf>, filter: SamplingFilter, divisor: u32) -> Result<String, String> {
+
+	for file in files {
+		let mut image = Image::load(file)?;
+
+		image.resize(image.width() / divisor, image.height() / divisor, filter)?;
+
+		let name = image.name()?;
+
+		image.save_as(&format!("{name}_resized"))?;
 	}
 
 	Ok("".to_string())
