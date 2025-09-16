@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, path::PathBuf};
+use std::{path::PathBuf};
 
 use image::{DynamicImage, GenericImage, GenericImageView, ImageReader, Rgba};
 
@@ -66,7 +66,8 @@ impl Image {
 			.to_str().ok_or("Invalid image extension")?;
 		// let name = self.path.file_stem().ok_or("Image missing file name")?;
 
-		self.raw.save(self.path.with_file_name(format!("{name}.{extension}")));
+		self.raw.save(self.path.with_file_name(format!("{name}.{extension}")))
+			.map_err(|e| e.to_string())?;
 
 		Ok(())
 	}
