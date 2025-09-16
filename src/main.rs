@@ -41,12 +41,7 @@ impl Cli {
 enum Commands {
 	/// Reduce colors in the target resource(s)
 	Reduce {
-		// #[arg(
-		// 	short, long,
-		// 	value_name = "THRESHOLD",
-		// 	default_value_t = 50.0,
-		// )]
-		// threshold: f32,
+		// TODO: color weighting???
 
 		/// Provide a color palette for image color reduction
 		#[arg(
@@ -83,15 +78,14 @@ enum Commands {
 		)]
 		divisor: u32,
 
-		// /// Specify how pixels are merged when downscaling
-		// #[arg(
-		// 	short, long,
-		// 	value_name = "METHOD",
-		// 	value_enum,
-		// 	default_value_t = MergeMethod::Average,
-		// )]
-		// merge: MergeMethod
+		/// Specify the output width of the scaled image (aspect ratio is preserved)
+		#[arg(
+			short, long,
+			value_name = "WIDTH"
+		)]
+		width: Option<u32>,
 
+		/// Specify a sampling filter when scaling
 		#[arg(
 			short, long,
 			value_name = "SCALE_METHOD",
@@ -117,8 +111,13 @@ fn main() {
 		Commands::Reduce { palette, files } => {
 			reduce(palette, files)
 		}
-		Commands::Scale  { files, sampling_filter, divisor } => {
-			scale(files, *sampling_filter, *divisor)
+		Commands::Scale  { 
+			files, 
+			sampling_filter, 
+			divisor ,
+			width
+		} => {
+			scale(files, *sampling_filter, *divisor, *width)
 		}
 	};
 }
@@ -137,12 +136,20 @@ fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
 	Ok(format!("Successfully applied palette to {} images", files.len()))
 }
 
-fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32) -> Result<String, String> {
+fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32, width_opt: Option<u32>) -> Result<String, String> {
 
 	for file in files {
 		let mut image = Image::load(file)?;
 
-		image.resize(image.width() / divisor, image.height() / divisor, filter.unwrap_or(SamplingFilter::Nearest))?;
+		let mut width = image.width();
+
+		if !width_opt.is_none() {
+			width = width_opt.unwrap();
+		}
+
+		let height = width / (image.width() / image.height());
+
+		image.resize(width / divisor, height / divisor, filter.unwrap_or(SamplingFilter::Nearest))?;
 
 		let name = image.name()?;
 
