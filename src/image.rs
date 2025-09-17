@@ -3,22 +3,22 @@ use std::{fmt, path::PathBuf};
 use clap::ValueEnum;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageReader, Rgba};
 
-use crate::{palette::Palette, rgb::RgbaColor};
-
 pub struct Image {
 	pub path: PathBuf,
 	pub raw: DynamicImage
 }
 
 impl Image {
-	#[allow(dead_code)]
 	pub fn height(&self) -> u32 {
 		self.raw.height()
 	}
 
-	#[allow(dead_code)]
 	pub fn width(&self) -> u32 {
 		self.raw.width()
+	}
+
+	pub fn pixels(&self) -> u32 {
+		self.width() * self.height()
 	}
 
 	pub fn name(&self) -> Result<&str, String> {
@@ -26,28 +26,30 @@ impl Image {
 			.to_str().ok_or("Invalid file name".to_string())
 	}
 
-	pub fn collect_unique_colors(&self) -> Vec<RgbaColor> {
+	pub fn get_pixel_raw(&self, x: u32, y: u32) -> Rgba<u8> {
+		self.raw.get_pixel(x, y)
+	}
+
+	pub fn put_pixel_raw(&mut self, x: u32, y: u32, px: Rgba<u8>) {
+		self.raw.put_pixel(x, y, px);
+	}
+
+	pub fn sort_raw_pixel_colors<F>(&self, on_read: Option<F>) -> Vec<Rgba<u8>> 
+		where F: Fn(Rgba<u8>) -> ()
+	{
 		let mut vec: Vec<Rgba<u8>> = self.raw.pixels()
-			.map(|(_, _, px)| px)
+			.map(|(_, _, px)| {
+				if let Some(ref cb) = on_read {
+					cb(px);
+				}
+
+				px
+			})
 			.collect();
 
 		vec.sort_by_key(|px| px.0);
-		vec.dedup();
 
-		vec.iter().map(|c| RgbaColor { raw: *c }).collect()
-	}
-
-	pub fn apply_palette(&mut self, palette: &Palette) {
-		let colors = self.collect_unique_colors();
-
-		let map = palette.nearest_match_map_raw(colors);
-
-		for x in 0..self.raw.width() {
-			for y in 0..self.raw.height() {
-				let px = self.raw.get_pixel(x, y);
-				self.raw.put_pixel(x, y, map.get(&px).unwrap().rgba.raw);
-			}
-		}
+		vec
 	}
 
 	pub fn load(path: &PathBuf) -> Result<Self, String> {

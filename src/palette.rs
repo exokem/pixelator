@@ -1,6 +1,5 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{str::FromStr};
 
-use image::Rgba;
 use ordered_float::OrderedFloat;
 
 use crate::rgb::{LabaColor, RgbaColor};
@@ -77,18 +76,5 @@ impl Palette {
 			.unwrap();
 
 		color
-	}
-
-	#[allow(dead_code)]
-	pub fn nearest_match_map(&self, colors: Vec<RgbaColor>) -> HashMap<RgbaColor, &PaletteColor> {
-		colors.into_iter().map(|rgba| {
-			(rgba, self.nearest_match(rgba))
-		}).collect()
-	}
-
-	pub fn nearest_match_map_raw(&self, colors: Vec<RgbaColor>) -> HashMap<Rgba<u8>, &PaletteColor> {
-		colors.into_iter().map(|rgba| {
-			(rgba.raw, self.nearest_match(rgba))
-		}).collect()
 	}
 }
