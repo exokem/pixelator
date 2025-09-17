@@ -167,29 +167,6 @@ fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
 		let name = image.name()?;
 
 		save_image_as(&image, &format!("{name}_reduced"), 6, STEPS)?;
-
-		// let test_spinner = ProgressBar::new_spinner()
-		// 	.with_message("2222")
-		// 	.with_style(spinner_style.clone());
-		// test_spinner.enable_steady_tick(Duration::from_millis(100));
-
-
-		// sleep(Duration::from_millis(2000));
-		// test_spinner.finish();
-
-
-		// let unique_spinner = ProgressBar::new_spinner()
-		// 	.with_message("Collecting unique colors");
-		// multi.add(unique_spinner.clone());
-
-		// // println!("{}", style("Collecting unique colors").bold());
-		// let unique_colors = image.collect_unique_colors();
-		// unique_spinner.finish_with_message(format!("Collected {} unique colors", unique_colors.len()));
-
-		// image.apply_palette(palette);
-
-
-		// image.save_as(&format!("{name}_reduced"))?;
 	}
 
 	Ok(format!("Successfully applied palette to {} images", files.len()))
