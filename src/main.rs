@@ -175,7 +175,12 @@ fn reduce(palette: &Palette, files: &Vec<PathBuf>) -> Result<String, String> {
 fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32, width_opt: Option<u32>) -> Result<String, String> {
 
 	for file in files {
-		let mut image = Image::load(file)?;
+
+		const STEPS: u8 = 3;
+
+		let mut image = load_image(file, 1, STEPS)?;
+
+		let spinner = new_spinner("Resizing image", 2, STEPS);
 
 		let mut width = image.width();
 
@@ -187,12 +192,11 @@ fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32, wid
 
 		image.resize(width / divisor, height / divisor, filter.unwrap_or(SamplingFilter::Nearest))?;
 
+		spinner.finish_with_message(format!("{} Resized image ({}x{})", format_step(2, STEPS), image.width(), image.height()));
+
 		let name = image.name()?;
-		let saved_name = format!("{name}_resized");
 
-		image.save_as(&saved_name)?;
-
-		// TODO: print info
+		save_image_as(&image, &format!("{name}_resized"), 3, STEPS)?;
 	}
 
 	Ok(format!("Successfully resized {} images", files.len()))
