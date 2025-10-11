@@ -50,7 +50,13 @@ pub enum Commands {
 			value_parser = clap::value_parser!(Palette),
 			value_name = "PALETTE"
 		)]
-		palette: Palette,
+		palette: Option<Palette>,
+
+		#[arg(
+			short, long,
+			value_name = "COLOR_FILE"
+		)]
+		colors: Option<PathBuf>,
 
 		/// Specify individual files for processing
 		#[arg(
@@ -93,6 +99,17 @@ pub enum Commands {
 		)]
 		sampling_filter: Option<SamplingFilter>,
 
+		/// Specify individual files for processing
+		#[arg(
+			short, long,
+			value_name = "FILES",
+			num_args = 0..,
+		)]
+		files: Vec<PathBuf>,
+	},
+
+	/// Extract a palette string from the target resource
+	Palette {
 		/// Specify individual files for processing
 		#[arg(
 			short, long,

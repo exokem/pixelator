@@ -29,9 +29,31 @@ fn main() {
 	println!();
 
 	let _ = match &cli.command {
-		Commands::Reduce { palette, files } => {
-			print_heading(&format!("{} reducer {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
-			reduce(palette, files)
+		Commands::Reduce { palette, files, colors } => {
+
+			if palette.is_some() {
+				print_heading(&format!("{} reducer {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+				let unwrapped_palette = palette.as_ref().unwrap();
+				reduce(&unwrapped_palette, files)
+			} else if colors.is_some() {
+				print_heading(&format!("{} reducer {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+
+				let path = colors.as_ref().expect("");
+
+				let image = load_image(&path, 1, 3);
+
+				if image.is_ok() {
+					let resolved_palette = palette_from_image(&image.unwrap(), 2, 3);
+					reduce(&resolved_palette, files)
+				} else {
+					panic!()
+				}
+
+				
+			} else {
+				panic!()
+			}
+
 		}
 		Commands::Scale  { 
 			files, 
@@ -41,6 +63,10 @@ fn main() {
 		} => {
 			print_heading(&format!("{} scaler {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
 			scale(files, *sampling_filter, *divisor, *width)
+		}
+		Commands::Palette { files } => {
+			print_heading(&format!("{} palette extractor {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+			extract_palette(files)
 		}
 	};
 
@@ -188,7 +214,8 @@ fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32, wid
 			width = width_opt.unwrap();
 		}
 
-		let height = width / (image.width() / image.height());
+		let ratio = image.width() as f32 / image.height() as f32;
+		let height = (width as f32 / ratio) as u32;
 
 		image.resize(width / divisor, height / divisor, filter.unwrap_or(SamplingFilter::Nearest))?;
 
@@ -200,4 +227,34 @@ fn scale(files: &Vec<PathBuf>, filter: Option<SamplingFilter>, divisor: u32, wid
 	}
 
 	Ok(format!("Successfully resized {} images", files.len()))
+}
+
+fn palette_from_image(image: &Image, step: u8, total_steps: u8) -> Palette {
+
+	let mut sorted_pixels = sort_pixels(&image, step, total_steps);
+
+	let unique_colors: Vec<RgbaColor> = deduplicate_pixel_colors(&mut sorted_pixels, step + 1, total_steps)
+		.into_iter()
+		.filter(|c| 0 < *c.alpha())
+		.collect();
+
+	return Palette::from(&unique_colors);
+}
+
+fn extract_palette(files: &Vec<PathBuf>) -> Result<String, String> {
+	for file in files {
+		const STEPS: u8 = 3;
+
+		let image = load_image(file, 1, STEPS)?;
+
+		let palette = palette_from_image(&image, 2, STEPS);
+
+		for color in palette.colors {
+			print!("{};", color.rgba.to_string());
+		}
+
+		println!();
+	}
+
+	Ok(format!("Extracted palettes for {} images", files.len()))
 }
