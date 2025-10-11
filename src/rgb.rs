@@ -218,3 +218,8 @@ impl FromStr for RgbaColor {
 	}
 }
 
+impl ToString for RgbaColor {
+	fn to_string(&self) -> String {
+		return format!("#{:02x}{:02x}{:02x}{:02x}", self.red(), self.green(), self.blue(), self.alpha());
+	}
+}
